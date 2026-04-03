@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm i:*)",
+      "Bash(npx nest:*)",
+      "Bash(npx jest:*)"
+    ]
+  }
+}

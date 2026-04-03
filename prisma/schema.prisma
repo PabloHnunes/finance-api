@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum PaymentType {
+  DEBIT
+  CREDIT
+  PIX
+  CASH
+  TRANSFER
+  BOLETO
+
+  @@map("payment_type_enum")
+}
+
+enum ExpenseCategory {
+  LEISURE
+  LOAN
+  FINANCING
+  GROCERIES
+  TRANSPORTATION
+  UTILITIES
+  HEALTHCARE
+  EDUCATION
+
+  @@map("expense_category_enum")
+}
+
+enum DocumentType {
+  PF
+  CNPJ
+
+  @@map("document_type_enum")
+}
+
+enum AuthProviderType {
+  LOCAL
+  GOOGLE
+  GITHUB
+
+  @@map("auth_provider_type_enum")
+}
+
+model User {
+  id             String         @id @default(uuid())
+  email          String         @unique
+  username       String         @unique @db.VarChar(30)
+  firstName      String         @map("first_name")
+  lastName       String         @map("last_name")
+  cpf            String         @unique
+  birthDate      DateTime       @map("birth_date") @db.Date
+  street         String
+  neighborhood   String
+  state          String         @db.VarChar(2)
+  city           String
+  number         String
+  zipCode        String         @map("zip_code") @db.VarChar(9)
+  authProviders  AuthProvider[]
+  banks          Bank[]
+  expenseEntries ExpenseEntry[]
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
+
+  @@map("users")
+}
+
+model AuthProvider {
+  id           String           @id @default(uuid())
+  provider     AuthProviderType
+  providerId   String?          @map("provider_id")
+  passwordHash String?          @map("password_hash")
+  user         User             @relation(fields: [userId], references: [id])
+  userId       String           @map("user_id")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  @@unique([provider, providerId])
+  @@unique([provider, userId])
+  @@map("auth_providers")
+}
+
+model Bank {
+  id             String         @id @default(uuid())
+  name           String         @db.VarChar(100)
+  description    String?
+  documentType   DocumentType   @map("document_type")
+  documentNumber String         @map("document_number") @db.VarChar(20)
+  user           User           @relation(fields: [userId], references: [id])
+  userId         String         @map("user_id")
+  expenseEntries ExpenseEntry[]
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@map("banks")
+}
+
+model ExpenseEntry {
+  id                String           @id @default(uuid())
+  amount            Decimal          @db.Decimal(10, 2)
+  expenseCategory   ExpenseCategory? @map("expense_category")
+  paymentType       PaymentType?     @map("payment_type")
+  bank              Bank?            @relation(fields: [bankId], references: [id])
+  bankId            String?          @map("bank_id")
+  installmentCount  Int              @default(1) @map("installment_count")
+  installmentNumber Int?             @map("installment_number")
+  createdBy         User             @relation(fields: [createdById], references: [id])
+  createdById       String           @map("created_by")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  deletedAt         DateTime?        @map("deleted_at")
+
+  @@map("expense_entries")
+}
