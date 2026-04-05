@@ -6,6 +6,7 @@ import { FinancingsService } from '../financings/financings.service';
 import { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { CreateExpenseEntryDto } from './dto/create-expense-entry.dto';
 import { UpdateExpenseEntryDto } from './dto/update-expense-entry.dto';
+import { parseAsUTCDate, createUTCDate } from '../common/utils/date.utils';
 
 @Injectable()
 export class ExpenseEntriesService {
@@ -27,7 +28,7 @@ export class ExpenseEntriesService {
       data: {
         ...rest,
         createdById: userId,
-        ...(date && { createdAt: new Date(date) }),
+        ...(date && { createdAt: parseAsUTCDate(date) }),
       },
       include: {
         bank: true,
@@ -43,7 +44,7 @@ export class ExpenseEntriesService {
     date: string | undefined,
     installmentCount: number,
   ) {
-    const startDate = date ? new Date(date) : new Date();
+    const startDate = date ? parseAsUTCDate(date) : new Date();
     const groupId = randomUUID();
 
     const entries: Awaited<
@@ -51,10 +52,10 @@ export class ExpenseEntriesService {
     >[] = [];
 
     for (let i = 0; i < installmentCount; i++) {
-      const entryDate = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth() + i,
-        startDate.getDate(),
+      const entryDate = createUTCDate(
+        startDate.getUTCFullYear(),
+        startDate.getUTCMonth() + i,
+        startDate.getUTCDate(),
       );
 
       const entry = await this.prisma.expenseEntry.create({
@@ -99,8 +100,8 @@ export class ExpenseEntriesService {
         this.financingsService.generateMonthlyInstallments(userId, month, year),
       ]);
 
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 1);
+      const startDate = createUTCDate(year, month - 1);
+      const endDate = createUTCDate(year, month);
       const where = {
         createdById: userId,
         deletedAt: null,
@@ -264,7 +265,7 @@ export class ExpenseEntriesService {
     const data = {
       ...rest,
       ...(amount !== undefined && !isFinancing && { amount }),
-      ...(date && { createdAt: new Date(date) }),
+      ...(date && { createdAt: parseAsUTCDate(date) }),
     };
 
     const updated = await this.prisma.expenseEntry.update({

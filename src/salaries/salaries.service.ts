@@ -14,8 +14,8 @@ export class SalariesService {
 
   async create(userId: string, dto: CreateSalaryDto) {
     const now = new Date();
-    const month = dto.month ?? now.getMonth() + 1;
-    const year = dto.year ?? now.getFullYear();
+    const month = dto.month ?? now.getUTCMonth() + 1;
+    const year = dto.year ?? now.getUTCFullYear();
 
     if (dto.isMain) {
       await this.deactivatePreviousMain(userId);

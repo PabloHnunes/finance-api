@@ -12,7 +12,8 @@
       "Bash(npm install:*)",
       "Bash(code .:*)",
       "Bash(xargs grep:*)",
-      "Bash(find /c/Users/pablo/projetos/workspace/finance-api/src -type f -name \"*.dto.ts\" -exec wc -l {} \\\\;)"
+      "Bash(find /c/Users/pablo/projetos/workspace/finance-api/src -type f -name \"*.dto.ts\" -exec wc -l {} \\\\;)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

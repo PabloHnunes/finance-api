@@ -6,6 +6,7 @@ import {
 import { ExpenseCategory, PaymentType } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { createUTCDate } from '../common/utils/date.utils';
 import { CreateFinancingDto } from './dto/create-financing.dto';
 import { UpdateFinancingDto } from './dto/update-financing.dto';
 
@@ -76,7 +77,7 @@ export class FinancingsService {
         installmentNumber: 1,
         bankId: dto.bankId,
         createdById: userId,
-        createdAt: new Date(dto.startYear, dto.startMonth - 1, 1),
+        createdAt: createUTCDate(dto.startYear, dto.startMonth - 1),
         financingDetail: {
           create: {
             description: dto.description,
@@ -106,7 +107,7 @@ export class FinancingsService {
 
     // Gerar entries retroativos até dezembro do ano corrente (batch)
     const now = new Date();
-    const endYear = now.getFullYear();
+    const endYear = now.getUTCFullYear();
     const toCreate: Array<{
       amount: number;
       expenseCategory: ExpenseCategory;
@@ -146,7 +147,7 @@ export class FinancingsService {
         installmentNumber: i,
         bankId: dto.bankId ?? null,
         createdById: userId,
-        createdAt: new Date(y, m - 1, 1),
+        createdAt: createUTCDate(y, m - 1),
       });
     }
 
@@ -457,8 +458,8 @@ export class FinancingsService {
         createdById: userId,
         deletedAt: null,
         createdAt: {
-          gte: new Date(year, month - 1, 1),
-          lt: new Date(year + 1, 0, 1),
+          gte: createUTCDate(year, month - 1),
+          lt: createUTCDate(year + 1, 0),
         },
       },
       select: { installmentGroupId: true, installmentNumber: true },
@@ -533,7 +534,7 @@ export class FinancingsService {
           installmentNumber,
           bankId: main.bankId,
           createdById: userId,
-          createdAt: new Date(year, targetMonth - 1, 1),
+          createdAt: createUTCDate(year, targetMonth - 1),
         });
       }
     }

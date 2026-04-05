@@ -3,6 +3,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { ExpenseCategory, PaymentType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { parseAsUTCDate, createUTCDate } from '../common/utils/date.utils';
 import { CreateRecurringExpenseDto } from './dto/create-recurring-expense.dto';
 import { UpdateRecurringExpenseDto } from './dto/update-recurring-expense.dto';
 
@@ -12,7 +13,7 @@ export class RecurringExpensesService {
 
   async create(userId: string, dto: CreateRecurringExpenseDto) {
     const { startDate, ...rest } = dto;
-    const start = new Date(startDate);
+    const start = parseAsUTCDate(startDate);
     const startMonth = start.getUTCMonth() + 1;
     const startYear = start.getUTCFullYear();
 
@@ -93,7 +94,7 @@ export class RecurringExpensesService {
     if (rest.bankId !== undefined) updateData.bankId = rest.bankId;
     if (rest.isActive !== undefined) updateData.isActive = rest.isActive;
     if (amount !== undefined) updateData.amount = amount;
-    if (startDate) updateData.startDate = new Date(startDate);
+    if (startDate) updateData.startDate = parseAsUTCDate(startDate);
 
     await this.prisma.recurringExpense.update({
       where: { id },
@@ -194,7 +195,7 @@ export class RecurringExpensesService {
     const now = new Date();
     const refMonth = month ?? now.getUTCMonth() + 1;
     const refYear = year ?? now.getUTCFullYear();
-    const fromDate = new Date(refYear, refMonth - 1, 1);
+    const fromDate = createUTCDate(refYear, refMonth - 1);
 
     // Soft-delete entries do mês informado em diante
     await this.prisma.expenseEntry.updateMany({
@@ -235,8 +236,8 @@ export class RecurringExpensesService {
         createdById: userId,
         deletedAt: null,
         createdAt: {
-          gte: new Date(year, month - 1, 1),
-          lt: new Date(year + 1, 0, 1),
+          gte: createUTCDate(year, month - 1),
+          lt: createUTCDate(year + 1, 0),
         },
       },
       select: { recurringExpenseId: true, createdAt: true },
@@ -296,7 +297,7 @@ export class RecurringExpensesService {
           bankId: recurring.bankId,
           recurringExpenseId: recurring.id,
           createdById: userId,
-          createdAt: new Date(year, m - 1, day),
+          createdAt: createUTCDate(year, m - 1, day),
         });
       }
     }
@@ -388,7 +389,7 @@ export class RecurringExpensesService {
           bankId: recurring.bankId,
           recurringExpenseId: recurring.id,
           createdById: userId,
-          createdAt: new Date(y, m - 1, day),
+          createdAt: createUTCDate(y, m - 1, day),
         });
       }
 
@@ -442,8 +443,8 @@ export class RecurringExpensesService {
       year < recStartYear || (year === recStartYear && month < recStartMonth);
     if (isBeforeStart) return null;
 
-    const periodStart = new Date(year, month - 1, 1);
-    const periodEnd = new Date(year, month, 1);
+    const periodStart = createUTCDate(year, month - 1);
+    const periodEnd = createUTCDate(year, month);
 
     const existing = await this.prisma.expenseEntry.findFirst({
       where: {
@@ -477,13 +478,13 @@ export class RecurringExpensesService {
         bankId: recurring.bankId,
         recurringExpenseId: recurring.id,
         createdById: userId,
-        createdAt: new Date(year, month - 1, day),
+        createdAt: createUTCDate(year, month - 1, day),
       },
       include: { bank: true },
     });
   }
 
   private getLastDayOfMonth(month: number, year: number): number {
-    return new Date(year, month, 0).getDate();
+    return new Date(Date.UTC(year, month, 0)).getUTCDate();
   }
 }

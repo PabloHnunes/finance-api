@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { createUTCDate } from '../common/utils/date.utils';
 
 @Injectable()
 export class BalanceService {
@@ -98,8 +99,8 @@ export class BalanceService {
     month: number,
     year: number,
   ) {
-    const periodStart = new Date(year, month - 1, 1);
-    const periodEnd = new Date(year, month, 1);
+    const periodStart = createUTCDate(year, month - 1);
+    const periodEnd = createUTCDate(year, month);
 
     // 2 queries em vez de N+1
     const [recurringExpenses, generatedEntries] = await Promise.all([
@@ -129,8 +130,8 @@ export class BalanceService {
   }
 
   private getExpenses(userId: string, month: number, year: number) {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 1);
+    const startDate = createUTCDate(year, month - 1);
+    const endDate = createUTCDate(year, month);
 
     return this.prisma.expenseEntry.findMany({
       where: {

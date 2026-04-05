@@ -6,6 +6,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CryptoService } from '../common/crypto.service';
+import { parseAsUTCDate } from '../common/utils/date.utils';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -43,7 +44,7 @@ export class UsersService {
       data: {
         ...userData,
         cpf: encryptedCpf,
-        birthDate: new Date(userData.birthDate),
+        birthDate: parseAsUTCDate(userData.birthDate),
         authProviders: {
           create: {
             provider: 'LOCAL',
@@ -100,7 +101,7 @@ export class UsersService {
       where: { id },
       data: {
         ...dto,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+        birthDate: dto.birthDate ? parseAsUTCDate(dto.birthDate) : undefined,
       },
       select: this.safeSelect(),
     });
