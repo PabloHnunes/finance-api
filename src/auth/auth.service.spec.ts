@@ -89,7 +89,9 @@ describe('AuthService', () => {
         accessToken: 'mock-token',
         refreshToken: 'mock-token',
       });
-      expect(mockUsersService.findByUsername).toHaveBeenCalledWith('pablohnunes');
+      expect(mockUsersService.findByUsername).toHaveBeenCalledWith(
+        'pablohnunes',
+      );
       expect(mockUsersService.findByEmail).not.toHaveBeenCalled();
     });
 
@@ -108,13 +110,13 @@ describe('AuthService', () => {
   });
 
   describe('refreshToken', () => {
-    it('deve gerar novos tokens com refresh token válido', async () => {
+    it('deve gerar novos tokens com refresh token válido', () => {
       mockJwtService.verify.mockReturnValue({
         sub: 'uuid-123',
         email: 'pablo@email.com',
       });
 
-      const result = await service.refreshToken('valid-refresh-token');
+      const result = service.refreshToken('valid-refresh-token');
 
       expect(result).toEqual({
         accessToken: 'mock-token',
@@ -122,12 +124,12 @@ describe('AuthService', () => {
       });
     });
 
-    it('deve lançar UnauthorizedException com refresh token inválido', async () => {
+    it('deve lançar UnauthorizedException com refresh token inválido', () => {
       mockJwtService.verify.mockImplementation(() => {
         throw new Error('invalid token');
       });
 
-      await expect(service.refreshToken('invalid-token')).rejects.toThrow(
+      expect(() => service.refreshToken('invalid-token')).toThrow(
         UnauthorizedException,
       );
     });

@@ -22,7 +22,8 @@ enum PaymentType {
 enum ExpenseCategory {
   LEISURE
   LOAN
-  FINANCING
+  FINANCING_PROPERTY
+  FINANCING_VEHICLE
   GROCERIES
   TRANSPORTATION
   UTILITIES
@@ -30,6 +31,22 @@ enum ExpenseCategory {
   EDUCATION
 
   @@map("expense_category_enum")
+}
+
+enum FinancingType {
+  PERSONAL_LOAN
+  VEHICLE
+  PROPERTY
+  OTHER
+
+  @@map("financing_type_enum")
+}
+
+enum AmortizationType {
+  SAC
+  PRICE
+
+  @@map("amortization_type_enum")
 }
 
 enum DocumentType {
@@ -61,9 +78,12 @@ model User {
   city           String
   number         String
   zipCode        String         @map("zip_code") @db.VarChar(9)
+  profileImageUrl String?       @map("profile_image_url")
   authProviders  AuthProvider[]
   banks          Bank[]
-  expenseEntries ExpenseEntry[]
+  salaries          Salary[]
+  expenseEntries    ExpenseEntry[]
+  recurringExpenses RecurringExpense[]
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
   deletedAt      DateTime?      @map("deleted_at")
@@ -76,7 +96,7 @@ model AuthProvider {
   provider     AuthProviderType
   providerId   String?          @map("provider_id")
   passwordHash String?          @map("password_hash")
-  user         User             @relation(fields: [userId], references: [id])
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId       String           @map("user_id")
   createdAt    DateTime         @default(now()) @map("created_at")
 
@@ -90,12 +110,15 @@ model Bank {
   name           String         @db.VarChar(100)
   description    String?
   documentType   DocumentType   @map("document_type")
-  documentNumber String         @map("document_number") @db.VarChar(20)
-  user           User           @relation(fields: [userId], references: [id])
+  documentNumber String         @map("document_number")
+  color          String?        @db.VarChar(7)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         String         @map("user_id")
-  expenseEntries ExpenseEntry[]
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  expenseEntries    ExpenseEntry[]
+  recurringExpenses RecurringExpense[]
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  deletedAt         DateTime?      @map("deleted_at")
 
   @@map("banks")
 }
@@ -105,15 +128,128 @@ model ExpenseEntry {
   amount            Decimal          @db.Decimal(10, 2)
   expenseCategory   ExpenseCategory? @map("expense_category")
   paymentType       PaymentType?     @map("payment_type")
-  bank              Bank?            @relation(fields: [bankId], references: [id])
+  bank              Bank?            @relation(fields: [bankId], references: [id], onDelete: SetNull)
   bankId            String?          @map("bank_id")
-  installmentCount  Int              @default(1) @map("installment_count")
-  installmentNumber Int?             @map("installment_number")
-  createdBy         User             @relation(fields: [createdById], references: [id])
+  isPriority        Boolean          @default(false) @map("is_priority")
+  splitParts        Int              @default(1) @map("split_parts")
+  userPart          Int              @default(1) @map("user_part")
+  installmentGroupId String?          @map("installment_group_id")
+  installmentCount   Int              @default(1) @map("installment_count")
+  installmentNumber  Int?             @map("installment_number")
+  financingDetail    FinancingDetail?
+  recurringExpense   RecurringExpense? @relation(fields: [recurringExpenseId], references: [id], onDelete: SetNull)
+  recurringExpenseId String?           @map("recurring_expense_id")
+  createdBy          User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdById       String           @map("created_by")
-  createdAt         DateTime         @default(now()) @map("created_at")
-  updatedAt         DateTime         @updatedAt @map("updated_at")
-  deletedAt         DateTime?        @map("deleted_at")
+  settledAt          DateTime?        @map("settled_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  deletedAt          DateTime?        @map("deleted_at")
 
   @@map("expense_entries")
+}
+
+enum FeeType {
+  FIXED
+  ON_BALANCE
+  ON_INSTALLMENT
+  ON_TOTAL_AMOUNT
+
+  @@map("fee_type_enum")
+}
+
+model FinancingDetail {
+  id                String           @id @default(uuid())
+  description       String?          @db.VarChar(150)
+  financingType     FinancingType    @map("financing_type")
+  amortizationType  AmortizationType @map("amortization_type")
+  totalAmount       Decimal          @db.Decimal(12, 2) @map("total_amount")
+  interestRate      Decimal          @db.Decimal(6, 4) @map("interest_rate")
+  monetaryCorrection Decimal         @default(0) @db.Decimal(8, 6) @map("monetary_correction")
+  totalInstallments Int              @map("total_installments")
+  paidInstallments  Int              @default(0) @map("paid_installments")
+  startMonth        Int              @map("start_month")
+  startYear         Int              @map("start_year")
+  fees              FinancingFee[]
+  expenseEntry      ExpenseEntry     @relation(fields: [expenseEntryId], references: [id], onDelete: Cascade)
+  expenseEntryId    String           @unique @map("expense_entry_id")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  @@map("financing_details")
+}
+
+model FinancingFee {
+  id                 String          @id @default(uuid())
+  name               String          @db.VarChar(50)
+  type               FeeType
+  value              Decimal         @db.Decimal(10, 6)
+  financingDetail    FinancingDetail @relation(fields: [financingDetailId], references: [id], onDelete: Cascade)
+  financingDetailId  String          @map("financing_detail_id")
+
+  @@map("financing_fees")
+}
+
+model Salary {
+  id        String          @id @default(uuid())
+  name      String          @db.VarChar(100)
+  isMain    Boolean         @default(false) @map("is_main")
+  isActive  Boolean         @default(true) @map("is_active")
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String          @map("user_id")
+  history   SalaryHistory[]
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  deletedAt DateTime?       @map("deleted_at")
+
+  @@map("salaries")
+}
+
+model SalaryHistory {
+  id        String   @id @default(uuid())
+  amount    Decimal  @db.Decimal(10, 2)
+  month     Int
+  year      Int
+  salary    Salary   @relation(fields: [salaryId], references: [id], onDelete: Cascade)
+  salaryId  String   @map("salary_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("salary_histories")
+}
+
+model RecurringExpense {
+  id              String                    @id @default(uuid())
+  name            String                    @db.VarChar(100)
+  amount          Decimal                   @db.Decimal(10, 2)
+  expenseCategory ExpenseCategory?          @map("expense_category")
+  paymentType     PaymentType?              @map("payment_type")
+  isPriority      Boolean                   @default(false) @map("is_priority")
+  splitParts      Int                       @default(1) @map("split_parts")
+  userPart        Int                       @default(1) @map("user_part")
+  dueDay          Int                       @map("due_day")
+  startDate       DateTime                  @map("start_date") @db.Date
+  isActive        Boolean                   @default(true) @map("is_active")
+  bankId          String?                   @map("bank_id")
+  bank            Bank?                     @relation(fields: [bankId], references: [id], onDelete: SetNull)
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String                    @map("user_id")
+  expenseEntries  ExpenseEntry[]
+  history         RecurringExpenseHistory[]
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+  deletedAt       DateTime?                 @map("deleted_at")
+
+  @@map("recurring_expenses")
+}
+
+model RecurringExpenseHistory {
+  id                 String           @id @default(uuid())
+  amount             Decimal          @db.Decimal(10, 2)
+  month              Int
+  year               Int
+  recurringExpense   RecurringExpense @relation(fields: [recurringExpenseId], references: [id], onDelete: Cascade)
+  recurringExpenseId String           @map("recurring_expense_id")
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  @@map("recurring_expense_histories")
 }

@@ -4,8 +4,7 @@ describe('CryptoService', () => {
   let service: CryptoService;
 
   beforeEach(() => {
-    process.env.ENCRYPTION_KEY =
-      'a'.repeat(64);
+    process.env.ENCRYPTION_KEY = 'a'.repeat(64);
     service = new CryptoService();
   });
 

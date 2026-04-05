@@ -34,9 +34,7 @@ export class UsersService {
       ) ||
       cpfConflict
     ) {
-      throw new ConflictException(
-        'Email, username or CPF already registered',
-      );
+      throw new ConflictException('Email, username or CPF already registered');
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -112,6 +110,19 @@ export class UsersService {
     };
   }
 
+  async updateProfileImage(id: string, imageUrl: string) {
+    await this.findOne(id);
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: { profileImageUrl: imageUrl },
+      select: this.safeSelect(),
+    });
+    return {
+      ...user,
+      cpf: this.maskCpf(this.crypto.decrypt(user.cpf)),
+    };
+  }
+
   async remove(id: string) {
     await this.findOne(id);
     const user = await this.prisma.user.update({
@@ -144,6 +155,7 @@ export class UsersService {
       city: true,
       number: true,
       zipCode: true,
+      profileImageUrl: true,
       createdAt: true,
       updatedAt: true,
     } as const;

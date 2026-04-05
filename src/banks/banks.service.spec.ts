@@ -9,6 +9,7 @@ const mockPrisma = {
     create: jest.fn(),
     findMany: jest.fn(),
     findFirst: jest.fn(),
+    count: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
   },
@@ -44,6 +45,7 @@ describe('BanksService', () => {
 
     service = module.get<BanksService>(BanksService);
     jest.clearAllMocks();
+    mockPrisma.bank.count.mockResolvedValue(0);
   });
 
   describe('create', () => {
@@ -78,8 +80,8 @@ describe('BanksService', () => {
 
       const result = await service.findAllByUser('user-uuid-1');
 
-      expect(result).toHaveLength(1);
-      expect(result[0].documentNumber).toBe('*******8901');
+      expect(result.list).toHaveLength(1);
+      expect(result.list[0].documentNumber).toBe('*******8901');
     });
 
     it('deve retornar lista vazia se usuário não tem bancos', async () => {
@@ -87,7 +89,7 @@ describe('BanksService', () => {
 
       const result = await service.findAllByUser('user-uuid-1');
 
-      expect(result).toHaveLength(0);
+      expect(result.list).toHaveLength(0);
     });
   });
 
@@ -105,9 +107,9 @@ describe('BanksService', () => {
     it('deve lançar NotFoundException se banco não existe', async () => {
       mockPrisma.bank.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.findOne('bank-999', 'user-uuid-1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('bank-999', 'user-uuid-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -148,25 +150,28 @@ describe('BanksService', () => {
   });
 
   describe('remove', () => {
-    it('deve deletar banco com sucesso', async () => {
+    it('deve fazer soft delete do banco', async () => {
       mockPrisma.bank.findFirst.mockResolvedValue(mockBank);
       mockCrypto.decrypt.mockReturnValue('12345678901');
-      mockPrisma.bank.delete.mockResolvedValue(mockBank);
-
-      const result = await service.remove('bank-uuid-1', 'user-uuid-1');
-
-      expect(mockPrisma.bank.delete).toHaveBeenCalledWith({
-        where: { id: 'bank-uuid-1' },
+      mockPrisma.bank.update.mockResolvedValue({
+        ...mockBank,
+        deletedAt: new Date(),
       });
-      expect(result).toEqual(mockBank);
+
+      await service.remove('bank-uuid-1', 'user-uuid-1');
+
+      expect(mockPrisma.bank.update).toHaveBeenCalledWith({
+        where: { id: 'bank-uuid-1' },
+        data: { deletedAt: expect.any(Date) },
+      });
     });
 
     it('deve lançar NotFoundException ao deletar banco inexistente', async () => {
       mockPrisma.bank.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.remove('bank-999', 'user-uuid-1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.remove('bank-999', 'user-uuid-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

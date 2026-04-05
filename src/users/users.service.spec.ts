@@ -102,7 +102,11 @@ describe('UsersService', () => {
 
     it('deve lançar ConflictException se username já existe', async () => {
       mockPrisma.user.findMany.mockResolvedValue([
-        { email: 'outro@email.com', username: 'pablohnunes', cpf: 'encrypted:99999999999' },
+        {
+          email: 'outro@email.com',
+          username: 'pablohnunes',
+          cpf: 'encrypted:99999999999',
+        },
       ]);
 
       await expect(service.create(createUserDto)).rejects.toThrow(
@@ -127,9 +131,10 @@ describe('UsersService', () => {
 
       await service.create(createUserDto);
 
-      const createCall = mockPrisma.user.create.mock.calls[0][0];
-      const passwordHash =
-        createCall.data.authProviders.create.passwordHash;
+      const createCall = mockPrisma.user.create.mock.calls[0][0] as {
+        data: { authProviders: { create: { passwordHash: string } } };
+      };
+      const passwordHash = createCall.data.authProviders.create.passwordHash;
 
       const isValid = await bcrypt.compare('SenhaForte123!', passwordHash);
       expect(isValid).toBe(true);

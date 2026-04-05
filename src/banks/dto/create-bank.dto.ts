@@ -29,4 +29,10 @@ export class CreateBankDto {
   @IsNotEmpty()
   @MaxLength(20)
   documentNumber: string;
+
+  @ApiPropertyOptional({ example: '#8A05BE' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(7)
+  color?: string;
 }

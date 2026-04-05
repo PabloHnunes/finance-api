@@ -6,14 +6,21 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { BanksService } from './banks.service';
 import { CreateBankDto } from './dto/create-bank.dto';
 import { UpdateBankDto } from './dto/update-bank.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OwnershipGuard } from '../auth/guards/ownership.guard';
 
 @ApiTags('Banks')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, OwnershipGuard)
 @Controller('banks')
 export class BanksController {
   constructor(private readonly banksService: BanksService) {}
@@ -29,8 +36,15 @@ export class BanksController {
 
   @Get('user/:userId')
   @ApiOperation({ summary: 'Listar bancos do usuário' })
-  findAll(@Param('userId', ParseUUIDPipe) userId: string) {
-    return this.banksService.findAllByUser(userId);
+  findAll(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Query() pagination: PaginationDto,
+  ) {
+    return this.banksService.findAllByUser(
+      userId,
+      pagination.limit,
+      pagination.offset,
+    );
   }
 
   @Get(':id/user/:userId')

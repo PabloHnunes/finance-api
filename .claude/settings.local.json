@@ -3,7 +3,16 @@
     "allow": [
       "Bash(npm i:*)",
       "Bash(npx nest:*)",
-      "Bash(npx jest:*)"
+      "Bash(npx jest:*)",
+      "Read(//c/Users/pablo/projetos/workspace/**)",
+      "Bash(npx create-expo-app@latest finance-mobile)",
+      "Bash(npx prisma:*)",
+      "Bash(npx eslint:*)",
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(code .:*)",
+      "Bash(xargs grep:*)",
+      "Bash(find /c/Users/pablo/projetos/workspace/finance-api/src -type f -name \"*.dto.ts\" -exec wc -l {} \\\\;)"
     ]
   }
 }
