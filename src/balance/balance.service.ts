@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { createUTCDate } from '../common/utils/date.utils';
+import { resolveSalaryHistoryEntry } from '../common/utils/salary-resolution.util';
 
 @Injectable()
 export class BalanceService {
@@ -64,7 +65,7 @@ export class BalanceService {
 
   private async getSalaries(userId: string, month: number, year: number) {
     const salaries = await this.prisma.salary.findMany({
-      where: { userId, isActive: true, deletedAt: null },
+      where: { userId, deletedAt: null },
       include: {
         history: {
           orderBy: [{ year: 'desc' as const }, { month: 'desc' as const }],
@@ -73,24 +74,12 @@ export class BalanceService {
     });
 
     return salaries
-      .map(
-        (salary: {
-          name: string;
-          isMain: boolean;
-          history: Array<{ year: number; month: number; amount: unknown }>;
-        }) => {
-          const entry = salary.isMain
-            ? salary.history.find(
-                (h) => h.year < year || (h.year === year && h.month <= month),
-              )
-            : salary.history.find(
-                (h) => h.year === year && h.month === month,
-              );
-          return entry
-            ? { name: salary.name, isMain: salary.isMain, amount: entry.amount }
-            : null;
-        },
-      )
+      .map((salary) => {
+        const entry = resolveSalaryHistoryEntry(salary, month, year);
+        return entry
+          ? { name: salary.name, isMain: salary.isMain, amount: entry.amount }
+          : null;
+      })
       .filter((s) => s !== null);
   }
 

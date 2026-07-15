@@ -191,16 +191,18 @@ model FinancingFee {
 }
 
 model Salary {
-  id        String          @id @default(uuid())
-  name      String          @db.VarChar(100)
-  isMain    Boolean         @default(false) @map("is_main")
-  isActive  Boolean         @default(true) @map("is_active")
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String          @map("user_id")
-  history   SalaryHistory[]
-  createdAt DateTime        @default(now()) @map("created_at")
-  updatedAt DateTime        @updatedAt @map("updated_at")
-  deletedAt DateTime?       @map("deleted_at")
+  id             String          @id @default(uuid())
+  name           String          @db.VarChar(100)
+  isMain         Boolean         @default(false) @map("is_main")
+  isActive       Boolean         @default(true) @map("is_active")
+  mainUntilMonth Int?            @map("main_until_month")
+  mainUntilYear  Int?            @map("main_until_year")
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String          @map("user_id")
+  history        SalaryHistory[]
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  deletedAt      DateTime?       @map("deleted_at")
 
   @@map("salaries")
 }

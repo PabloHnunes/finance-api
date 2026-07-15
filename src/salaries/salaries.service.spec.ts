@@ -95,7 +95,12 @@ describe('SalariesService', () => {
 
       expect(mockPrisma.salary.updateMany).toHaveBeenCalledWith({
         where: { userId: 'user-uuid-1', isMain: true },
-        data: { isMain: false, isActive: false },
+        data: {
+          isMain: false,
+          isActive: false,
+          mainUntilMonth: 4,
+          mainUntilYear: 2026,
+        },
       });
     });
 
@@ -273,12 +278,26 @@ describe('SalariesService', () => {
       });
 
       expect(mockPrisma.salary.updateMany).toHaveBeenCalledWith({
-        where: { userId: 'user-uuid-1', isMain: true },
-        data: { isMain: false, isActive: false },
+        where: {
+          userId: 'user-uuid-1',
+          isMain: true,
+          id: { not: 'salary-uuid-1' },
+        },
+        data: {
+          isMain: false,
+          isActive: false,
+          mainUntilMonth: 4,
+          mainUntilYear: 2026,
+        },
       });
       expect(mockPrisma.salary.update).toHaveBeenCalledWith({
         where: { id: 'salary-uuid-1' },
-        data: { isMain: true, isActive: true },
+        data: {
+          isMain: true,
+          isActive: true,
+          mainUntilMonth: null,
+          mainUntilYear: null,
+        },
         include: {
           history: { orderBy: [{ year: 'desc' }, { month: 'desc' }] },
         },

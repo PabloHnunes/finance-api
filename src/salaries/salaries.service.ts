@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { resolveSalaryHistoryEntry } from '../common/utils/salary-resolution.util';
 import { CreateSalaryDto } from './dto/create-salary.dto';
 import { UpdateSalaryDto } from './dto/update-salary.dto';
 
@@ -18,7 +19,7 @@ export class SalariesService {
     const year = dto.year ?? now.getUTCFullYear();
 
     if (dto.isMain) {
-      await this.deactivatePreviousMain(userId);
+      await this.deactivatePreviousMain(userId, month, year);
     }
 
     return this.prisma.salary.create({
@@ -61,13 +62,7 @@ export class SalariesService {
     if (month && year) {
       const filtered = data
         .map((salary) => {
-          const entry = salary.isMain
-            ? salary.history.find(
-                (h) => h.year < year || (h.year === year && h.month <= month),
-              )
-            : salary.history.find(
-                (h) => h.year === year && h.month === month,
-              );
+          const entry = resolveSalaryHistoryEntry(salary, month, year);
           return entry ? { ...salary, activeAmount: entry.amount } : null;
         })
         .filter((s) => s !== null);
@@ -91,14 +86,30 @@ export class SalariesService {
 
   async update(id: string, userId: string, dto: UpdateSalaryDto) {
     const salary = await this.findOne(id, userId);
+    const latestHistory = salary.history[0];
 
     const salaryData: Record<string, unknown> = {};
     if (dto.name !== undefined) salaryData.name = dto.name;
+
     if (dto.isMain !== undefined) {
       salaryData.isMain = dto.isMain;
       if (dto.isMain) {
-        await this.deactivatePreviousMain(userId);
+        const effectiveMonth = dto.month ?? latestHistory?.month;
+        const effectiveYear = dto.year ?? latestHistory?.year;
+        if (effectiveMonth === undefined || effectiveYear === undefined) {
+          throw new BadRequestException(
+            'No salary history found to determine the reference month/year',
+          );
+        }
+        await this.deactivatePreviousMain(
+          userId,
+          effectiveMonth,
+          effectiveYear,
+          id,
+        );
         salaryData.isActive = true;
+        salaryData.mainUntilMonth = null;
+        salaryData.mainUntilYear = null;
       }
     }
 
@@ -108,7 +119,6 @@ export class SalariesService {
       dto.year !== undefined;
 
     if (hasAmountOrDate) {
-      const latestHistory = salary.history[0];
       if (!latestHistory) {
         throw new BadRequestException('No salary history found to update');
       }
@@ -153,10 +163,19 @@ export class SalariesService {
     return this.findOne(id, userId);
   }
 
-  private async deactivatePreviousMain(userId: string) {
+  private async deactivatePreviousMain(
+    userId: string,
+    mainUntilMonth: number,
+    mainUntilYear: number,
+    excludeId?: string,
+  ) {
     await this.prisma.salary.updateMany({
-      where: { userId, isMain: true },
-      data: { isMain: false, isActive: false },
+      where: {
+        userId,
+        isMain: true,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      data: { isMain: false, isActive: false, mainUntilMonth, mainUntilYear },
     });
   }
 

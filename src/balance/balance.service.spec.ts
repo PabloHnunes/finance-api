@@ -157,6 +157,36 @@ describe('BalanceService', () => {
       expect(result.totalSalary).toBe(4100);
     });
 
+    it('deve manter o salário antigo nos meses em que ele era o principal, mesmo após trocar de principal', async () => {
+      mockPrisma.salary.findMany.mockResolvedValue([
+        {
+          name: 'Salário CLT (antigo)',
+          isMain: false,
+          isActive: false,
+          mainUntilMonth: 5,
+          mainUntilYear: 2026,
+          history: [{ amount: 4000, month: 1, year: 2026 }],
+        },
+        {
+          name: 'Salário CLT (reajustado)',
+          isMain: true,
+          isActive: true,
+          mainUntilMonth: null,
+          mainUntilYear: null,
+          history: [{ amount: 4500, month: 5, year: 2026 }],
+        },
+      ]);
+      mockPrisma.expenseEntry.findMany.mockResolvedValue([]);
+
+      const jan = await service.getBalance('user-uuid-1', 1, 2026);
+      const abr = await service.getBalance('user-uuid-1', 4, 2026);
+      const mai = await service.getBalance('user-uuid-1', 5, 2026);
+
+      expect(jan.totalSalary).toBe(4000);
+      expect(abr.totalSalary).toBe(4000);
+      expect(mai.totalSalary).toBe(4500);
+    });
+
     it('deve ignorar salário sem histórico válido para o período', async () => {
       mockPrisma.salary.findMany.mockResolvedValue([
         {
