@@ -4,6 +4,7 @@ import { ExpenseCategory, PaymentType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { parseAsUTCDate, createUTCDate } from '../common/utils/date.utils';
+import { getAmountForPeriod } from '../common/utils/recurring-expense-resolution.util';
 import { CreateRecurringExpenseDto } from './dto/create-recurring-expense.dto';
 import { UpdateRecurringExpenseDto } from './dto/update-recurring-expense.dto';
 
@@ -161,7 +162,7 @@ export class RecurringExpensesService {
       const existing = existingEntryMap.get(key);
 
       if (existing) {
-        const entryAmount = this.getAmountForPeriod(recurring.history, m, y);
+        const entryAmount = getAmountForPeriod(recurring.history, m, y);
 
         await this.prisma.expenseEntry.update({
           where: { id: existing.id },
@@ -279,7 +280,7 @@ export class RecurringExpensesService {
 
         const amount =
           recurring.history && recurring.history.length > 0
-            ? this.getAmountForPeriod(recurring.history, m, year)
+            ? getAmountForPeriod(recurring.history, m, year)
             : recurring.amount;
 
         const day = Math.min(
@@ -371,7 +372,7 @@ export class RecurringExpensesService {
       if (!existingSet.has(key)) {
         const amount =
           recurring.history && recurring.history.length > 0
-            ? this.getAmountForPeriod(recurring.history, m, y)
+            ? getAmountForPeriod(recurring.history, m, y)
             : recurring.amount;
 
         const day = Math.min(
@@ -406,17 +407,6 @@ export class RecurringExpensesService {
     }
 
     return toCreate.length;
-  }
-
-  private getAmountForPeriod(
-    history: Array<{ amount: Decimal; month: number; year: number }>,
-    month: number,
-    year: number,
-  ): Decimal {
-    const entry = history.find(
-      (h) => h.year < year || (h.year === year && h.month <= month),
-    );
-    return entry ? entry.amount : history[history.length - 1].amount;
   }
 
   private async generateEntryForMonth(
@@ -462,7 +452,7 @@ export class RecurringExpensesService {
 
     const amount =
       recurring.history && recurring.history.length > 0
-        ? this.getAmountForPeriod(recurring.history, month, year)
+        ? getAmountForPeriod(recurring.history, month, year)
         : recurring.amount;
 
     const day = Math.min(recurring.dueDay, this.getLastDayOfMonth(month, year));

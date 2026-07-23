@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min, Validate } from 'class-validator';
+import { SplitPartsValidator } from '../../common/validators/split-parts.validator';
 
 export class UpdateFinancingDto {
   @ApiPropertyOptional({ example: 'Financiamento Apartamento' })
@@ -35,6 +36,7 @@ export class UpdateFinancingDto {
   @IsInt()
   @Min(1)
   @IsOptional()
+  @Validate(SplitPartsValidator)
   userPart?: number;
 
   @ApiPropertyOptional({ example: 'bank-uuid' })

@@ -7,6 +7,7 @@ import { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { CreateExpenseEntryDto } from './dto/create-expense-entry.dto';
 import { UpdateExpenseEntryDto } from './dto/update-expense-entry.dto';
 import { parseAsUTCDate, createUTCDate } from '../common/utils/date.utils';
+import { assertSplitPartsValid } from '../common/validators/split-parts.validator';
 
 @Injectable()
 export class ExpenseEntriesService {
@@ -19,6 +20,8 @@ export class ExpenseEntriesService {
   async create(userId: string, dto: CreateExpenseEntryDto) {
     const { date, ...rest } = dto;
     const installmentCount = dto.installmentCount ?? 1;
+
+    assertSplitPartsValid(dto.splitParts ?? 1, dto.userPart ?? 1);
 
     if (installmentCount > 1) {
       return this.createInstallments(userId, rest, date, installmentCount);
@@ -196,51 +199,10 @@ export class ExpenseEntriesService {
       }
     }
 
-    // Calcular valor em reais das fees para cada entry
-    return entries.map((e) => {
-      const detail = e.financingDetail as any;
-      if (!detail?.fees?.length) return e;
-
-      const totalAmount = Number(detail.totalAmount);
-      const interestRate = Number(detail.interestRate);
-      const installmentNumber = e.installmentNumber ?? 1;
-      const amort = totalAmount / detail.totalInstallments;
-      const outstandingBalance =
-        totalAmount - amort * (installmentNumber - 1);
-
-      const enrichedFees = detail.fees.map(
-        (fee: { name: string; type: string; value: unknown }) => {
-          const rate = Number(fee.value);
-          let calculatedValue: number;
-
-          switch (fee.type) {
-            case 'FIXED':
-              calculatedValue = rate;
-              break;
-            case 'ON_BALANCE':
-              calculatedValue =
-                Math.round(outstandingBalance * rate * 100) / 100;
-              break;
-            case 'ON_INSTALLMENT':
-              calculatedValue =
-                Math.round(Number(e.amount) * rate * 100) / 100;
-              break;
-            case 'ON_TOTAL_AMOUNT':
-              calculatedValue = Math.round(totalAmount * rate * 100) / 100;
-              break;
-            default:
-              calculatedValue = rate;
-          }
-
-          return { ...fee, calculatedValue };
-        },
-      );
-
-      return {
-        ...e,
-        financingDetail: { ...detail, fees: enrichedFees },
-      };
-    });
+    // Reaproveita o mesmo cálculo usado em GET /financings, evitando que as
+    // duas rotas divirjam sobre amortizationType, monetaryCorrection e a
+    // base de cálculo das fees.
+    return entries.map((e) => this.financingsService.enrichFees(e as any));
   }
 
   async findOne(id: string, userId: string) {
@@ -258,6 +220,12 @@ export class ExpenseEntriesService {
 
   async update(id: string, userId: string, dto: UpdateExpenseEntryDto) {
     const entry = await this.findOne(id, userId);
+
+    assertSplitPartsValid(
+      dto.splitParts ?? entry.splitParts,
+      dto.userPart ?? entry.userPart,
+    );
+
     const { date, amount, ...rest } = dto;
 
     // Financiamentos não podem ter o valor alterado

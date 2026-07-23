@@ -8,9 +8,11 @@ import {
   IsOptional,
   IsUUID,
   Min,
+  Validate,
   ValidateIf,
 } from 'class-validator';
 import { ExpenseCategory, PaymentType } from '@prisma/client';
+import { SplitPartsValidator } from '../../common/validators/split-parts.validator';
 
 export class UpdateExpenseEntryDto {
   @ApiPropertyOptional({ example: 150.5 })
@@ -50,6 +52,7 @@ export class UpdateExpenseEntryDto {
   @IsInt()
   @Min(1)
   @IsOptional()
+  @Validate(SplitPartsValidator)
   userPart?: number;
 
   @ApiPropertyOptional({ example: 'bank-uuid', nullable: true })

@@ -60,6 +60,7 @@ describe('ExpenseEntriesService', () => {
           provide: FinancingsService,
           useValue: {
             generateMonthlyInstallments: jest.fn().mockResolvedValue([]),
+            enrichFees: jest.fn().mockImplementation((entry) => entry),
           },
         },
       ],

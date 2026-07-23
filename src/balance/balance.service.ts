@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { createUTCDate } from '../common/utils/date.utils';
 import { resolveSalaryHistoryEntry } from '../common/utils/salary-resolution.util';
+import { getAmountForPeriod } from '../common/utils/recurring-expense-resolution.util';
 
 @Injectable()
 export class BalanceService {
@@ -37,8 +38,11 @@ export class BalanceService {
     }
 
     for (const recurring of recurringExpenses) {
+      const periodAmount = Number(
+        getAmountForPeriod(recurring.history, month, year),
+      );
       const effectiveAmount =
-        Number(recurring.amount) * (recurring.userPart / recurring.splitParts);
+        periodAmount * (recurring.userPart / recurring.splitParts);
 
       totalExpenses += effectiveAmount;
 
@@ -98,6 +102,11 @@ export class BalanceService {
           userId,
           isActive: true,
           startDate: { lte: periodEnd },
+        },
+        include: {
+          history: {
+            orderBy: [{ year: 'desc' as const }, { month: 'desc' as const }],
+          },
         },
       }),
       this.prisma.expenseEntry.findMany({

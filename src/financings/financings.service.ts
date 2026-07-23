@@ -9,12 +9,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { createUTCDate } from '../common/utils/date.utils';
 import { CreateFinancingDto } from './dto/create-financing.dto';
 import { UpdateFinancingDto } from './dto/update-financing.dto';
+import { assertSplitPartsValid } from '../common/validators/split-parts.validator';
 
 @Injectable()
 export class FinancingsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, dto: CreateFinancingDto) {
+    assertSplitPartsValid(dto.splitParts ?? 1, dto.userPart ?? 1);
+
     const categoryMap: Record<string, ExpenseCategory> = {
       PROPERTY: ExpenseCategory.FINANCING_PROPERTY,
       VEHICLE: ExpenseCategory.FINANCING_VEHICLE,
@@ -214,6 +217,11 @@ export class FinancingsService {
   async update(id: string, userId: string, dto: UpdateFinancingDto) {
     const entry = await this.findOne(id, userId);
     const detail = entry.financingDetail!;
+
+    assertSplitPartsValid(
+      dto.splitParts ?? entry.splitParts,
+      dto.userPart ?? entry.userPart,
+    );
 
     const updateData: Record<string, unknown> = {};
     const detailData: Record<string, unknown> = {};
@@ -775,7 +783,7 @@ export class FinancingsService {
     return Math.round(total * 100) / 100;
   }
 
-  private enrichFees<
+  enrichFees<
     T extends {
       installmentNumber: number | null;
       amount: unknown;
@@ -784,6 +792,7 @@ export class FinancingsService {
         interestRate: unknown;
         totalInstallments: number;
         monetaryCorrection: unknown;
+        amortizationType: string;
         fees: Array<{ name: string; type: string; value: unknown }>;
       } | null;
     },
@@ -798,7 +807,7 @@ export class FinancingsService {
 
     // Usar calculateAllInstallments para obter saldo exato da parcela
     const allInstallments = this.calculateAllInstallments(
-      'SAC',
+      detail.amortizationType,
       totalAmount,
       interestRate,
       detail.totalInstallments,
@@ -810,6 +819,8 @@ export class FinancingsService {
     const balance = inst
       ? inst.outstandingBalance + inst.amortization
       : totalAmount;
+    // Base pré-taxas (amortização + juros), igual à usada em calculateFees na criação
+    const installmentBase = inst ? inst.amortization + inst.interest : Number(entry.amount);
 
     const enrichedFees = detail.fees.map((fee) => {
       const rate = Number(fee.value);
@@ -823,7 +834,7 @@ export class FinancingsService {
           calculatedValue = Math.round(balance * rate * 100) / 100;
           break;
         case 'ON_INSTALLMENT':
-          calculatedValue = Math.round(Number(entry.amount) * rate * 100) / 100;
+          calculatedValue = Math.round(installmentBase * rate * 100) / 100;
           break;
         case 'ON_TOTAL_AMOUNT':
           calculatedValue = Math.round(totalAmount * rate * 100) / 100;

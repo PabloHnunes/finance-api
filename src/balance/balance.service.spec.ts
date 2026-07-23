@@ -269,6 +269,7 @@ describe('BalanceService', () => {
           splitParts: 1,
           userPart: 1,
           startDate: new Date('2026-01-01'),
+          history: [{ amount: 120, month: 1, year: 2026 }],
         },
         {
           id: 'rec-2',
@@ -278,6 +279,7 @@ describe('BalanceService', () => {
           splitParts: 2,
           userPart: 1,
           startDate: new Date('2026-01-01'),
+          history: [{ amount: 200, month: 1, year: 2026 }],
         },
       ]);
       mockPrisma.expenseEntry.findFirst.mockResolvedValue(null);
@@ -313,6 +315,31 @@ describe('BalanceService', () => {
           splitParts: 1,
           userPart: 1,
           startDate: new Date('2026-01-01'),
+          history: [{ amount: 120, month: 1, year: 2026 }],
+        },
+      ]);
+
+      const result = await service.getBalance('user-uuid-1', 4, 2026);
+
+      expect(result.totalExpenses).toBe(120);
+    });
+
+    it('deve usar o valor histórico vigente no mês, não o valor atual, para recorrentes ainda não gerados', async () => {
+      mockPrisma.salary.findMany.mockResolvedValue([]);
+      mockPrisma.expenseEntry.findMany.mockResolvedValue([]);
+      mockPrisma.recurringExpense.findMany.mockResolvedValue([
+        {
+          id: 'rec-1',
+          amount: 200, // valor atual, já reajustado
+          expenseCategory: 'UTILITIES',
+          paymentType: 'BOLETO',
+          splitParts: 1,
+          userPart: 1,
+          startDate: new Date('2026-01-01'),
+          history: [
+            { amount: 200, month: 6, year: 2026 }, // reajuste a partir de junho
+            { amount: 120, month: 1, year: 2026 }, // valor original
+          ],
         },
       ]);
 
