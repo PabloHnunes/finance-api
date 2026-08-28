@@ -39,6 +39,7 @@ const mockEntry = {
   installmentCount: 1,
   installmentNumber: null,
   createdById: 'user-uuid-1',
+  entryDate: new Date(),
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: null,
@@ -130,7 +131,7 @@ describe('ExpenseEntriesService', () => {
     it('deve criar gasto com data retroativa', async () => {
       const retroEntry = {
         ...mockEntry,
-        createdAt: new Date('2026-03-15T00:00:00.000Z'),
+        entryDate: new Date('2026-03-15T00:00:00.000Z'),
       };
       mockPrisma.expenseEntry.create.mockResolvedValue(retroEntry);
 
@@ -143,7 +144,7 @@ describe('ExpenseEntriesService', () => {
         data: {
           amount: 200,
           createdById: 'user-uuid-1',
-          createdAt: new Date('2026-03-15T00:00:00.000Z'),
+          entryDate: new Date('2026-03-15T00:00:00.000Z'),
         },
         include: {
         bank: true,
@@ -151,7 +152,7 @@ describe('ExpenseEntriesService', () => {
         financingDetail: { include: { fees: true } },
       },
       });
-      expect(result.createdAt).toEqual(new Date('2026-03-15T00:00:00.000Z'));
+      expect(result.entryDate).toEqual(new Date('2026-03-15T00:00:00.000Z'));
     });
 
     it('deve criar parcelas em meses sequenciais', async () => {
@@ -171,11 +172,11 @@ describe('ExpenseEntriesService', () => {
       expect(calls[0][0].data.amount).toBe(300);
       expect(calls[0][0].data.installmentNumber).toBe(1);
       expect(calls[0][0].data.installmentCount).toBe(3);
-      expect(calls[0][0].data.createdAt.getMonth()).toBe(0); // janeiro
+      expect(calls[0][0].data.entryDate.getMonth()).toBe(0); // janeiro
       expect(calls[1][0].data.installmentNumber).toBe(2);
-      expect(calls[1][0].data.createdAt.getMonth()).toBe(1); // fevereiro
+      expect(calls[1][0].data.entryDate.getMonth()).toBe(1); // fevereiro
       expect(calls[2][0].data.installmentNumber).toBe(3);
-      expect(calls[2][0].data.createdAt.getMonth()).toBe(2); // março
+      expect(calls[2][0].data.entryDate.getMonth()).toBe(2); // março
 
       expect(result).toHaveLength(3);
     });
@@ -195,7 +196,7 @@ describe('ExpenseEntriesService', () => {
           createdById: 'user-uuid-1',
           deletedAt: null,
           settledAt: null,
-          createdAt: {
+          entryDate: {
             gte: new Date(2026, 3, 1),
             lt: new Date(2026, 4, 1),
           },
@@ -205,7 +206,7 @@ describe('ExpenseEntriesService', () => {
         recurringExpense: true,
         financingDetail: { include: { fees: true } },
       },
-        orderBy: [{ isPriority: 'desc' }, { createdAt: 'desc' }],
+        orderBy: [{ isPriority: 'desc' }, { entryDate: 'desc' }],
       });
       expect(result.list).toHaveLength(1);
     });

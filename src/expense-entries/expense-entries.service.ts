@@ -31,7 +31,7 @@ export class ExpenseEntriesService {
       data: {
         ...rest,
         createdById: userId,
-        ...(date && { createdAt: parseAsUTCDate(date) }),
+        ...(date && { entryDate: parseAsUTCDate(date) }),
       },
       include: {
         bank: true,
@@ -69,7 +69,7 @@ export class ExpenseEntriesService {
           installmentCount,
           installmentNumber: i + 1,
           createdById: userId,
-          createdAt: entryDate,
+          entryDate,
         },
         include: {
         bank: true,
@@ -109,7 +109,7 @@ export class ExpenseEntriesService {
         createdById: userId,
         deletedAt: null,
         settledAt: null,
-        createdAt: { gte: startDate, lt: endDate },
+        entryDate: { gte: startDate, lt: endDate },
       };
 
       const [data, total] = await Promise.all([
@@ -120,7 +120,7 @@ export class ExpenseEntriesService {
         recurringExpense: true,
         financingDetail: { include: { fees: true } },
       },
-          orderBy: [{ isPriority: 'desc' }, { createdAt: 'desc' }],
+          orderBy: [{ isPriority: 'desc' }, { entryDate: 'desc' }],
           ...pagination,
         }),
         this.prisma.expenseEntry.count({ where }),
@@ -146,7 +146,7 @@ export class ExpenseEntriesService {
           recurringExpense: true,
           financingDetail: { include: { fees: true } },
         },
-        orderBy: [{ isPriority: 'desc' }, { createdAt: 'desc' }],
+        orderBy: [{ isPriority: 'desc' }, { entryDate: 'desc' }],
         ...pagination,
       }),
       this.prisma.expenseEntry.count({ where }),
@@ -233,7 +233,7 @@ export class ExpenseEntriesService {
     const data = {
       ...rest,
       ...(amount !== undefined && !isFinancing && { amount }),
-      ...(date && { createdAt: parseAsUTCDate(date) }),
+      ...(date && { entryDate: parseAsUTCDate(date) }),
     };
 
     const updated = await this.prisma.expenseEntry.update({

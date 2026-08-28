@@ -114,7 +114,7 @@ export class BalanceService {
           createdById: userId,
           deletedAt: null,
           recurringExpenseId: { not: null },
-          createdAt: { gte: periodStart, lt: periodEnd },
+          entryDate: { gte: periodStart, lt: periodEnd },
         },
         select: { recurringExpenseId: true },
       }),
@@ -136,7 +136,7 @@ export class BalanceService {
         createdById: userId,
         deletedAt: null,
         settledAt: null,
-        createdAt: {
+        entryDate: {
           gte: startDate,
           lt: endDate,
         },

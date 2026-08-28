@@ -142,6 +142,7 @@ model ExpenseEntry {
   createdBy          User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdById       String           @map("created_by")
   settledAt          DateTime?        @map("settled_at")
+  entryDate          DateTime         @default(now()) @map("entry_date")
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
   deletedAt          DateTime?        @map("deleted_at")

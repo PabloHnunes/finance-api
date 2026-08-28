@@ -142,13 +142,13 @@ export class RecurringExpensesService {
         deletedAt: null,
         settledAt: null,
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { entryDate: 'asc' },
     });
 
     // Mapear entries existentes por mês/ano
     const existingEntryMap = new Map<string, (typeof allEntries)[0]>();
     for (const entry of allEntries) {
-      const key = `${entry.createdAt.getUTCFullYear()}-${entry.createdAt.getUTCMonth() + 1}`;
+      const key = `${entry.entryDate.getUTCFullYear()}-${entry.entryDate.getUTCMonth() + 1}`;
       existingEntryMap.set(key, entry);
     }
 
@@ -204,7 +204,7 @@ export class RecurringExpensesService {
         recurringExpenseId: id,
         createdById: userId,
         deletedAt: null,
-        createdAt: { gte: fromDate },
+        entryDate: { gte: fromDate },
       },
       data: { deletedAt: now },
     });
@@ -236,19 +236,19 @@ export class RecurringExpensesService {
         recurringExpenseId: { in: recurringIds },
         createdById: userId,
         deletedAt: null,
-        createdAt: {
+        entryDate: {
           gte: createUTCDate(year, month - 1),
           lt: createUTCDate(year + 1, 0),
         },
       },
-      select: { recurringExpenseId: true, createdAt: true },
+      select: { recurringExpenseId: true, entryDate: true },
     });
 
     // Mapear existentes: "recurringId-mes" → true
     const existingSet = new Set(
       existingEntries.map(
         (e) =>
-          `${e.recurringExpenseId}-${e.createdAt.getUTCFullYear()}-${e.createdAt.getUTCMonth() + 1}`,
+          `${e.recurringExpenseId}-${e.entryDate.getUTCFullYear()}-${e.entryDate.getUTCMonth() + 1}`,
       ),
     );
 
@@ -263,7 +263,7 @@ export class RecurringExpensesService {
       bankId: string | null;
       recurringExpenseId: string;
       createdById: string;
-      createdAt: Date;
+      entryDate: Date;
     }> = [];
 
     for (const recurring of recurringExpenses) {
@@ -298,7 +298,7 @@ export class RecurringExpensesService {
           bankId: recurring.bankId,
           recurringExpenseId: recurring.id,
           createdById: userId,
-          createdAt: createUTCDate(year, m - 1, day),
+          entryDate: createUTCDate(year, m - 1, day),
         });
       }
     }
@@ -341,13 +341,13 @@ export class RecurringExpensesService {
         createdById: userId,
         deletedAt: null,
       },
-      select: { createdAt: true },
+      select: { entryDate: true },
     });
 
     const existingSet = new Set(
       existingEntries.map(
         (e) =>
-          `${e.createdAt.getUTCFullYear()}-${e.createdAt.getUTCMonth() + 1}`,
+          `${e.entryDate.getUTCFullYear()}-${e.entryDate.getUTCMonth() + 1}`,
       ),
     );
 
@@ -361,7 +361,7 @@ export class RecurringExpensesService {
       bankId: string | null;
       recurringExpenseId: string;
       createdById: string;
-      createdAt: Date;
+      entryDate: Date;
     }> = [];
 
     let m = startMonth;
@@ -390,7 +390,7 @@ export class RecurringExpensesService {
           bankId: recurring.bankId,
           recurringExpenseId: recurring.id,
           createdById: userId,
-          createdAt: createUTCDate(y, m - 1, day),
+          entryDate: createUTCDate(y, m - 1, day),
         });
       }
 
@@ -441,7 +441,7 @@ export class RecurringExpensesService {
         recurringExpenseId: recurring.id,
         createdById: userId,
         deletedAt: null,
-        createdAt: {
+        entryDate: {
           gte: periodStart,
           lt: periodEnd,
         },
@@ -468,7 +468,7 @@ export class RecurringExpensesService {
         bankId: recurring.bankId,
         recurringExpenseId: recurring.id,
         createdById: userId,
-        createdAt: createUTCDate(year, month - 1, day),
+        entryDate: createUTCDate(year, month - 1, day),
       },
       include: { bank: true },
     });

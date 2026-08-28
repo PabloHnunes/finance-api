@@ -80,7 +80,7 @@ export class FinancingsService {
         installmentNumber: 1,
         bankId: dto.bankId,
         createdById: userId,
-        createdAt: createUTCDate(dto.startYear, dto.startMonth - 1),
+        entryDate: createUTCDate(dto.startYear, dto.startMonth - 1),
         financingDetail: {
           create: {
             description: dto.description,
@@ -123,7 +123,7 @@ export class FinancingsService {
       installmentNumber: number;
       bankId: string | null;
       createdById: string;
-      createdAt: Date;
+      entryDate: Date;
     }> = [];
 
     let m = dto.startMonth;
@@ -150,7 +150,7 @@ export class FinancingsService {
         installmentNumber: i,
         bankId: dto.bankId ?? null,
         createdById: userId,
-        createdAt: createUTCDate(y, m - 1),
+        entryDate: createUTCDate(y, m - 1),
       });
     }
 
@@ -169,7 +169,7 @@ export class FinancingsService {
         financingDetail: { isNot: null },
       },
       include: { financingDetail: { include: { fees: true } }, bank: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { entryDate: 'desc' },
     });
 
     return mainEntries.map((entry) => this.enrichFees(entry));
@@ -187,7 +187,7 @@ export class FinancingsService {
         deletedAt: null,
       },
       include: { financingDetail: true, bank: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { entryDate: 'asc' },
     });
   }
 
@@ -299,13 +299,13 @@ export class FinancingsService {
           createdById: userId,
           deletedAt: null,
         },
-        select: { id: true, createdAt: true },
+        select: { id: true, entryDate: true },
       });
 
       const idsToUpdate = allGroupEntries
         .filter((e) => {
-          const m = e.createdAt.getUTCMonth() + 1;
-          const y = e.createdAt.getUTCFullYear();
+          const m = e.entryDate.getUTCMonth() + 1;
+          const y = e.entryDate.getUTCFullYear();
           return y > fromYear || (y === fromYear && m >= fromMonth);
         })
         .map((e) => e.id);
@@ -465,7 +465,7 @@ export class FinancingsService {
         installmentGroupId: { in: groupIds },
         createdById: userId,
         deletedAt: null,
-        createdAt: {
+        entryDate: {
           gte: createUTCDate(year, month - 1),
           lt: createUTCDate(year + 1, 0),
         },
@@ -491,7 +491,7 @@ export class FinancingsService {
       installmentNumber: number;
       bankId: string | null;
       createdById: string;
-      createdAt: Date;
+      entryDate: Date;
     }> = [];
 
     for (const main of mainEntries) {
@@ -542,7 +542,7 @@ export class FinancingsService {
           installmentNumber,
           bankId: main.bankId,
           createdById: userId,
-          createdAt: createUTCDate(year, targetMonth - 1),
+          entryDate: createUTCDate(year, targetMonth - 1),
         });
       }
     }

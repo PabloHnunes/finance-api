@@ -213,7 +213,7 @@ describe('BalanceService', () => {
           createdById: 'user-uuid-1',
           deletedAt: null,
           settledAt: null,
-          createdAt: {
+          entryDate: {
             gte: new Date(2026, 3, 1),
             lt: new Date(2026, 4, 1),
           },

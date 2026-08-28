@@ -244,7 +244,7 @@ describe('RecurringExpensesService', () => {
           recurringExpenseId: 'recurring-uuid-1',
           createdById: 'user-uuid-1',
           deletedAt: null,
-          createdAt: { gte: new Date(2026, 2, 1) },
+          entryDate: { gte: new Date(2026, 2, 1) },
         },
         data: { deletedAt: expect.any(Date) },
       });
@@ -271,7 +271,7 @@ describe('RecurringExpensesService', () => {
           recurringExpenseId: 'recurring-uuid-1',
           createdById: 'user-uuid-1',
           deletedAt: null,
-          createdAt: { gte: fromDate },
+          entryDate: { gte: fromDate },
         },
         data: { deletedAt: expect.any(Date) },
       });
@@ -316,7 +316,7 @@ describe('RecurringExpensesService', () => {
       for (let m = 4; m <= 12; m++) {
         existingEntries.push({
           recurringExpenseId: 'recurring-uuid-1',
-          createdAt: new Date(Date.UTC(2026, m - 1, 10)),
+          entryDate: new Date(Date.UTC(2026, m - 1, 10)),
         });
       }
       mockPrisma.expenseEntry.findMany.mockResolvedValue(existingEntries);

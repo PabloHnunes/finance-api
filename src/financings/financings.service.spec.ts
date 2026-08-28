@@ -47,6 +47,7 @@ const mockEntry = {
   bank: null,
   financingDetail: mockFinancingDetail,
   createdById: 'user-uuid-1',
+  entryDate: new Date(),
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: null,
@@ -150,7 +151,7 @@ describe('FinancingsService', () => {
           financingDetail: { isNot: null },
         },
         include: { financingDetail: { include: { fees: true } }, bank: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { entryDate: 'desc' },
       });
       expect(result).toHaveLength(1);
     });
