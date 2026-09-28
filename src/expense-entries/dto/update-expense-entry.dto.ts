@@ -6,19 +6,31 @@ import {
   IsInt,
   IsNumber,
   IsOptional,
+  IsString,
   IsUUID,
+  MaxLength,
   Min,
   Validate,
   ValidateIf,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ExpenseCategory, PaymentType } from '@prisma/client';
 import { SplitPartsValidator } from '../../common/validators/split-parts.validator';
+import { trimToNull } from '../../common/utils/string.utils';
 
 export class UpdateExpenseEntryDto {
   @ApiPropertyOptional({ example: 150.5 })
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsOptional()
   amount?: number;
+
+  @ApiPropertyOptional({ example: 'Padaria', nullable: true })
+  @Transform(({ value }) => trimToNull(value))
+  @ValidateIf((o) => o.description !== null)
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  description?: string | null;
 
   @ApiPropertyOptional({ enum: ExpenseCategory, nullable: true })
   @ValidateIf((o) => o.expenseCategory !== null)

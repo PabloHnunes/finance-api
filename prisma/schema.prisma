@@ -126,6 +126,7 @@ model Bank {
 model ExpenseEntry {
   id                String           @id @default(uuid())
   amount            Decimal          @db.Decimal(10, 2)
+  description       String?          @db.VarChar(100)
   expenseCategory   ExpenseCategory? @map("expense_category")
   paymentType       PaymentType?     @map("payment_type")
   bank              Bank?            @relation(fields: [bankId], references: [id], onDelete: SetNull)

@@ -7,11 +7,15 @@ import {
   IsNotEmpty,
   IsNumber,
   IsOptional,
+  IsString,
   IsUUID,
+  MaxLength,
   Min,
   Validate,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { SplitPartsValidator } from '../../common/validators/split-parts.validator';
+import { trimToNull } from '../../common/utils/string.utils';
 import { ExpenseCategory, PaymentType } from '@prisma/client';
 
 export class CreateExpenseEntryDto {
@@ -19,6 +23,13 @@ export class CreateExpenseEntryDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsNotEmpty()
   amount: number;
+
+  @ApiPropertyOptional({ example: 'Padaria' })
+  @Transform(({ value }) => trimToNull(value) ?? undefined)
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  description?: string;
 
   @ApiPropertyOptional({ enum: ExpenseCategory })
   @IsEnum(ExpenseCategory)

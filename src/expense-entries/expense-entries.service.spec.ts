@@ -180,6 +180,41 @@ describe('ExpenseEntriesService', () => {
 
       expect(result).toHaveLength(3);
     });
+
+    it('deve repassar a descrição ao criar gasto avulso', async () => {
+      mockPrisma.expenseEntry.create.mockResolvedValue({
+        ...mockEntry,
+        description: 'Padaria',
+      });
+
+      await service.create('user-uuid-1', {
+        amount: 25,
+        description: 'Padaria',
+      });
+
+      expect(mockPrisma.expenseEntry.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ description: 'Padaria' }),
+        }),
+      );
+    });
+
+    it('deve aplicar a descrição em todas as parcelas', async () => {
+      mockPrisma.expenseEntry.create.mockResolvedValue(mockEntry);
+
+      await service.create('user-uuid-1', {
+        amount: 300,
+        description: 'Notebook',
+        installmentCount: 3,
+        date: '2026-01-15T00:00:00.000Z',
+      });
+
+      const calls = mockPrisma.expenseEntry.create.mock.calls;
+      expect(calls).toHaveLength(3);
+      for (const [args] of calls) {
+        expect(args.data.description).toBe('Notebook');
+      }
+    });
   });
 
   describe('findAllByUser', () => {
@@ -338,6 +373,43 @@ describe('ExpenseEntriesService', () => {
         },
         data: { splitParts: 2, userPart: 1 },
       });
+    });
+
+    it('deve limpar a descrição quando enviada como null', async () => {
+      mockPrisma.expenseEntry.findFirst.mockResolvedValue({
+        ...mockEntry,
+        description: 'Padaria',
+      });
+      mockPrisma.expenseEntry.update.mockResolvedValue({
+        ...mockEntry,
+        description: null,
+      });
+
+      await service.update('entry-uuid-1', 'user-uuid-1', {
+        description: null,
+      });
+
+      expect(mockPrisma.expenseEntry.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { description: null } }),
+      );
+    });
+
+    it('não deve propagar a descrição para as demais parcelas', async () => {
+      const installmentEntry = {
+        ...mockEntry,
+        installmentGroupId: 'group-uuid-1',
+        installmentNumber: 2,
+        installmentCount: 3,
+        financingDetail: null,
+      };
+      mockPrisma.expenseEntry.findFirst.mockResolvedValue(installmentEntry);
+      mockPrisma.expenseEntry.update.mockResolvedValue(installmentEntry);
+
+      await service.update('entry-uuid-1', 'user-uuid-1', {
+        description: 'Uber aeroporto',
+      });
+
+      expect(mockPrisma.expenseEntry.updateMany).not.toHaveBeenCalled();
     });
 
     it('não deve propagar splitParts para financiamentos', async () => {
