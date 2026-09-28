@@ -123,8 +123,6 @@ export class SalariesService {
         throw new BadRequestException('No salary history found to update');
       }
 
-      const newMonth = dto.month ?? latestHistory.month;
-      const newYear = dto.year ?? latestHistory.year;
       const newAmount = dto.amount ?? Number(latestHistory.amount);
 
       // A main salary forward-fills, so a new period is a new history point
@@ -134,6 +132,11 @@ export class SalariesService {
         (salary.mainUntilMonth != null && salary.mainUntilYear != null);
 
       if (isForwardFilled) {
+        // Without an explicit period the change applies from the current
+        // month on, like create does, leaving earlier months untouched.
+        const now = new Date();
+        const newMonth = dto.month ?? now.getUTCMonth() + 1;
+        const newYear = dto.year ?? now.getUTCFullYear();
         const samePeriodEntry = salary.history.find(
           (h) => h.month === newMonth && h.year === newYear,
         );
@@ -156,6 +159,8 @@ export class SalariesService {
       } else {
         // A one-off income only counts in its own month, so changing the
         // period corrects its date instead of adding an occurrence.
+        const newMonth = dto.month ?? latestHistory.month;
+        const newYear = dto.year ?? latestHistory.year;
         const hasOtherHistory = salary.history.length > 1;
         if (
           hasOtherHistory &&
