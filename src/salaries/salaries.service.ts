@@ -127,27 +127,57 @@ export class SalariesService {
       const newYear = dto.year ?? latestHistory.year;
       const newAmount = dto.amount ?? Number(latestHistory.amount);
 
-      const hasOtherHistory = salary.history.length > 1;
-      if (
-        hasOtherHistory &&
-        (dto.month !== undefined || dto.year !== undefined)
-      ) {
-        const secondLatest = salary.history[1];
-        const otherIsAfterOrEqual =
-          secondLatest.year > newYear ||
-          (secondLatest.year === newYear && secondLatest.month >= newMonth);
+      // A main salary forward-fills, so a new period is a new history point
+      // (e.g. a raise); moving the existing entry would erase past months.
+      const isForwardFilled =
+        salary.isMain ||
+        (salary.mainUntilMonth != null && salary.mainUntilYear != null);
 
-        if (otherIsAfterOrEqual) {
-          throw new BadRequestException(
-            'Cannot set date before or equal to a previous history entry',
-          );
+      if (isForwardFilled) {
+        const samePeriodEntry = salary.history.find(
+          (h) => h.month === newMonth && h.year === newYear,
+        );
+
+        if (samePeriodEntry) {
+          await this.prisma.salaryHistory.update({
+            where: { id: samePeriodEntry.id },
+            data: { amount: newAmount },
+          });
+        } else {
+          await this.prisma.salaryHistory.create({
+            data: {
+              salaryId: id,
+              amount: newAmount,
+              month: newMonth,
+              year: newYear,
+            },
+          });
         }
-      }
+      } else {
+        // A one-off income only counts in its own month, so changing the
+        // period corrects its date instead of adding an occurrence.
+        const hasOtherHistory = salary.history.length > 1;
+        if (
+          hasOtherHistory &&
+          (dto.month !== undefined || dto.year !== undefined)
+        ) {
+          const secondLatest = salary.history[1];
+          const otherIsAfterOrEqual =
+            secondLatest.year > newYear ||
+            (secondLatest.year === newYear && secondLatest.month >= newMonth);
 
-      await this.prisma.salaryHistory.update({
-        where: { id: latestHistory.id },
-        data: { amount: newAmount, month: newMonth, year: newYear },
-      });
+          if (otherIsAfterOrEqual) {
+            throw new BadRequestException(
+              'Cannot set date before or equal to a previous history entry',
+            );
+          }
+        }
+
+        await this.prisma.salaryHistory.update({
+          where: { id: latestHistory.id },
+          data: { amount: newAmount, month: newMonth, year: newYear },
+        });
+      }
     }
 
     if (Object.keys(salaryData).length > 0) {

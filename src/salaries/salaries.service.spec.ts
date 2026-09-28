@@ -14,6 +14,7 @@ const mockPrisma = {
     delete: jest.fn(),
   },
   salaryHistory: {
+    create: jest.fn(),
     update: jest.fn(),
     deleteMany: jest.fn(),
   },
@@ -325,12 +326,8 @@ describe('SalariesService', () => {
       });
     });
 
-    it('deve atualizar o valor no histórico mais recente', async () => {
+    it('deve atualizar o valor da principal no mesmo período sem criar histórico', async () => {
       mockPrisma.salary.findFirst.mockResolvedValue(mockSalary);
-      mockPrisma.salaryHistory.update.mockResolvedValue({
-        ...mockHistory,
-        amount: 4100,
-      });
 
       await service.update('salary-uuid-1', 'user-uuid-1', {
         amount: 4100,
@@ -338,16 +335,53 @@ describe('SalariesService', () => {
 
       expect(mockPrisma.salaryHistory.update).toHaveBeenCalledWith({
         where: { id: 'history-uuid-1' },
-        data: { amount: 4100, month: 4, year: 2026 },
+        data: { amount: 4100 },
       });
+      expect(mockPrisma.salaryHistory.create).not.toHaveBeenCalled();
     });
 
-    it('deve atualizar mês/ano do histórico quando há apenas um registro', async () => {
+    it('deve criar novo histórico ao alterar a principal para outro mês, preservando o anterior', async () => {
       mockPrisma.salary.findFirst.mockResolvedValue(mockSalary);
-      mockPrisma.salaryHistory.update.mockResolvedValue({
-        ...mockHistory,
-        month: 6,
+
+      await service.update('salary-uuid-1', 'user-uuid-1', {
+        amount: 4100,
+        month: 11,
         year: 2026,
+      });
+
+      expect(mockPrisma.salaryHistory.create).toHaveBeenCalledWith({
+        data: {
+          salaryId: 'salary-uuid-1',
+          amount: 4100,
+          month: 11,
+          year: 2026,
+        },
+      });
+      expect(mockPrisma.salaryHistory.update).not.toHaveBeenCalled();
+    });
+
+    it('deve criar novo histórico para principal substituída (com mainUntil)', async () => {
+      mockPrisma.salary.findFirst.mockResolvedValue({
+        ...mockSalary,
+        isMain: false,
+        mainUntilMonth: 12,
+        mainUntilYear: 2026,
+      });
+
+      await service.update('salary-uuid-1', 'user-uuid-1', {
+        amount: 3900,
+        month: 8,
+        year: 2026,
+      });
+
+      expect(mockPrisma.salaryHistory.create).toHaveBeenCalled();
+      expect(mockPrisma.salaryHistory.update).not.toHaveBeenCalled();
+    });
+
+    it('deve mover mês/ano de renda extra em vez de criar histórico', async () => {
+      mockPrisma.salary.findFirst.mockResolvedValue({
+        ...mockSalary,
+        isMain: false,
       });
 
       await service.update('salary-uuid-1', 'user-uuid-1', {
@@ -359,6 +393,7 @@ describe('SalariesService', () => {
         where: { id: 'history-uuid-1' },
         data: { amount: 3600, month: 6, year: 2026 },
       });
+      expect(mockPrisma.salaryHistory.create).not.toHaveBeenCalled();
     });
 
     it('deve lançar BadRequestException ao definir data anterior a outro registro do histórico', async () => {
@@ -373,6 +408,7 @@ describe('SalariesService', () => {
 
       const salaryWithMultipleHistory = {
         ...mockSalary,
+        isMain: false,
         history: [mockHistory, olderHistory],
       };
 
