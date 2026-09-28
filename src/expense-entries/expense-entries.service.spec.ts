@@ -14,6 +14,7 @@ const mockPrisma = {
     update: jest.fn(),
     updateMany: jest.fn(),
   },
+  $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
 };
 
 const mockRecurringExpensesService = {
@@ -179,6 +180,72 @@ describe('ExpenseEntriesService', () => {
       expect(calls[2][0].data.entryDate.getMonth()).toBe(2); // março
 
       expect(result).toHaveLength(3);
+    });
+
+    const installmentDates = async (date: string, installmentCount: number) => {
+      mockPrisma.expenseEntry.create.mockResolvedValue(mockEntry);
+      await service.create('user-uuid-1', {
+        amount: 100,
+        installmentCount,
+        date,
+      });
+      return mockPrisma.expenseEntry.create.mock.calls.map(([args]) =>
+        (args.data.entryDate as Date).toISOString().slice(0, 10),
+      );
+    };
+
+    it('deve limitar o dia ao fim do mês em parcelas iniciadas no dia 31', async () => {
+      expect(await installmentDates('2026-01-31T00:00:00.000Z', 3)).toEqual([
+        '2026-01-31',
+        '2026-02-28',
+        '2026-03-31',
+      ]);
+    });
+
+    it('deve usar 29/02 em ano bissexto', async () => {
+      expect(await installmentDates('2028-01-31T00:00:00.000Z', 2)).toEqual([
+        '2028-01-31',
+        '2028-02-29',
+      ]);
+    });
+
+    it('deve virar o ano e limitar fevereiro em parcelas iniciadas em 30/11', async () => {
+      expect(await installmentDates('2026-11-30T00:00:00.000Z', 4)).toEqual([
+        '2026-11-30',
+        '2026-12-30',
+        '2027-01-30',
+        '2027-02-28',
+      ]);
+    });
+
+    it('deve manter o dia quando ele existe em todos os meses', async () => {
+      expect(await installmentDates('2026-01-10T00:00:00.000Z', 3)).toEqual([
+        '2026-01-10',
+        '2026-02-10',
+        '2026-03-10',
+      ]);
+    });
+
+    it('deve gravar todas as parcelas numa única transação', async () => {
+      mockPrisma.expenseEntry.create.mockResolvedValue(mockEntry);
+
+      const result = await service.create('user-uuid-1', {
+        amount: 100,
+        installmentCount: 6,
+        date: '2026-01-10T00:00:00.000Z',
+      });
+
+      expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.$transaction.mock.calls[0][0]).toHaveLength(6);
+      expect(result).toHaveLength(6);
+    });
+
+    it('não deve usar transação para gasto à vista', async () => {
+      mockPrisma.expenseEntry.create.mockResolvedValue(mockEntry);
+
+      await service.create('user-uuid-1', { amount: 100 });
+
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
 
     it('deve repassar a descrição ao criar gasto avulso', async () => {

@@ -3,7 +3,11 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { ExpenseCategory, PaymentType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginatedResponse } from '../common/dto/paginated-response.dto';
-import { parseAsUTCDate, createUTCDate } from '../common/utils/date.utils';
+import {
+  parseAsUTCDate,
+  createUTCDate,
+  getLastDayOfMonth,
+} from '../common/utils/date.utils';
 import { getAmountForPeriod } from '../common/utils/recurring-expense-resolution.util';
 import { CreateRecurringExpenseDto } from './dto/create-recurring-expense.dto';
 import { UpdateRecurringExpenseDto } from './dto/update-recurring-expense.dto';
@@ -283,10 +287,7 @@ export class RecurringExpensesService {
             ? getAmountForPeriod(recurring.history, m, year)
             : recurring.amount;
 
-        const day = Math.min(
-          recurring.dueDay,
-          this.getLastDayOfMonth(m, year),
-        );
+        const day = Math.min(recurring.dueDay, getLastDayOfMonth(m, year));
 
         toCreate.push({
           amount,
@@ -375,10 +376,7 @@ export class RecurringExpensesService {
             ? getAmountForPeriod(recurring.history, m, y)
             : recurring.amount;
 
-        const day = Math.min(
-          recurring.dueDay,
-          this.getLastDayOfMonth(m, y),
-        );
+        const day = Math.min(recurring.dueDay, getLastDayOfMonth(m, y));
 
         toCreate.push({
           amount,
@@ -455,7 +453,7 @@ export class RecurringExpensesService {
         ? getAmountForPeriod(recurring.history, month, year)
         : recurring.amount;
 
-    const day = Math.min(recurring.dueDay, this.getLastDayOfMonth(month, year));
+    const day = Math.min(recurring.dueDay, getLastDayOfMonth(month, year));
 
     return this.prisma.expenseEntry.create({
       data: {
@@ -472,9 +470,5 @@ export class RecurringExpensesService {
       },
       include: { bank: true },
     });
-  }
-
-  private getLastDayOfMonth(month: number, year: number): number {
-    return new Date(Date.UTC(year, month, 0)).getUTCDate();
   }
 }

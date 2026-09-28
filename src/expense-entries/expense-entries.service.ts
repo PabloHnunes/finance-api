@@ -6,7 +6,11 @@ import { FinancingsService } from '../financings/financings.service';
 import { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { CreateExpenseEntryDto } from './dto/create-expense-entry.dto';
 import { UpdateExpenseEntryDto } from './dto/update-expense-entry.dto';
-import { parseAsUTCDate, createUTCDate } from '../common/utils/date.utils';
+import {
+  parseAsUTCDate,
+  createUTCDate,
+  createUTCDateClamped,
+} from '../common/utils/date.utils';
 import { assertSplitPartsValid } from '../common/validators/split-parts.validator';
 
 @Injectable()
@@ -50,38 +54,32 @@ export class ExpenseEntriesService {
     const startDate = date ? parseAsUTCDate(date) : new Date();
     const groupId = randomUUID();
 
-    const entries: Awaited<
-      ReturnType<typeof this.prisma.expenseEntry.create>
-    >[] = [];
-
-    for (let i = 0; i < installmentCount; i++) {
-      const entryDate = createUTCDate(
-        startDate.getUTCFullYear(),
-        startDate.getUTCMonth() + i,
-        startDate.getUTCDate(),
-      );
-
-      const entry = await this.prisma.expenseEntry.create({
-        data: {
-          ...data,
-          amount: data.amount,
-          installmentGroupId: groupId,
-          installmentCount,
-          installmentNumber: i + 1,
-          createdById: userId,
-          entryDate,
-        },
-        include: {
-        bank: true,
-        recurringExpense: true,
-        financingDetail: { include: { fees: true } },
-      },
-      });
-
-      entries.push(entry);
-    }
-
-    return entries;
+    // Uma única transação: se qualquer parcela falhar, nenhuma é gravada.
+    return this.prisma.$transaction(
+      Array.from({ length: installmentCount }, (_, i) =>
+        this.prisma.expenseEntry.create({
+          data: {
+            ...data,
+            amount: data.amount,
+            installmentGroupId: groupId,
+            installmentCount,
+            installmentNumber: i + 1,
+            createdById: userId,
+            // Dia limitado ao fim do mês para não pular meses curtos.
+            entryDate: createUTCDateClamped(
+              startDate.getUTCFullYear(),
+              startDate.getUTCMonth() + i,
+              startDate.getUTCDate(),
+            ),
+          },
+          include: {
+            bank: true,
+            recurringExpense: true,
+            financingDetail: { include: { fees: true } },
+          },
+        }),
+      ),
+    );
   }
 
   async findAllByUser(
